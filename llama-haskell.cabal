@@ -1,0 +1,155 @@
+cabal-version:                      3.0
+name:                               llama-haskell
+version:                            0.1.0.0
+synopsis:                           Haskell bindings and application for llama.cpp.
+-- description:
+homepage:                           https://github.com/sighingnow/llama.haskell
+license:                            MIT
+license-file:                       LICENSE
+author:                             Tao He
+maintainer:                         sighingnow@gmail.com
+copyright:                          (c) 2023 Tao He
+category:                           Machine Learning
+build-type:                         Simple
+extra-doc-files:                    CHANGELOG.md
+extra-source-files:                 LICENSE
+
+common warnings
+    ghc-options:                    -O2
+                                    -Wall
+                                    -Wno-unused-top-binds
+                                    -- -Werror=name-shadowing
+
+flag cuda
+    description:                    Build with CUDA support
+    default:                        False
+    manual:                         True
+
+flag metal
+    description:                    Build with Metal support
+    default:                        False
+    manual:                         True
+
+flag mpi
+    description:                    Build with MPI support
+    default:                        False
+    manual:                         True
+
+flag opencl
+    description:                    Build with OpenCL support
+    default:                        False
+    manual:                         True
+
+library
+    import:                         warnings
+    exposed-modules:                AI.LanguageModel.GGML.FFI
+                                    AI.LanguageModel.GGML.FFI.Alloc
+                                    AI.LanguageModel.LLaMA
+                                    AI.LanguageModel.LLaMA.FFI
+                                    AI.LanguageModel.LLaMA.Parameters
+    -- other-modules:
+    build-depends:                  base
+                                  , microlens
+                                  , microlens-th
+                                  , microlens-mtl
+                                  , mtl
+    hs-source-dirs:                 src
+    include-dirs:                   cbits
+                                    llama.cpp
+                                    llama.cpp/common
+    includes:                       ggml.h
+                                    ggml-alloc.h
+                                    llama.h
+                                    llama-capi.h
+    c-sources:                      cbits/llama-capi.c
+                                    llama.cpp/common/common.cpp
+                                    llama.cpp/common/console.cpp
+                                    llama.cpp/common/grammar-parser.cpp
+                                    llama.cpp/ggml.c
+                                    llama.cpp/ggml-alloc.c
+                                    llama.cpp/llama.cpp
+                                    llama.cpp/k_quants.c
+    cc-options:                     -O3
+                                    -std=c11
+                                    -fPIC
+                                    -DNDEBUG
+                                    -Wall
+                                    -Wextra
+                                    -Wpedantic
+                                    -Wcast-qual
+                                    -Wdouble-promotion
+                                    -Wshadow
+                                    -Wstrict-prototypes
+                                    -Wpointer-arith
+                                    -Wmissing-prototypes
+                                    -pthread
+                                    -DGGML_USE_K_QUANTS
+                                    -DGGML_QKK_64
+
+    if arch(x86_64) || arch(i686) || arch(amd64)
+        cc-options:                 -march=native
+                                    -mtune=native
+    if arch(aarch64)
+        cc-options:                 -mcpu=native
+    if arch(aarch64) && os(darwin)
+        cc-options:                 -DGGML_USE_ACCELERATE
+                                    -framework Accelerate
+
+    if flag(cuda)
+        exposed-modules:            AI.LanguageModel.LLaMA.FFI.CUDA
+
+    if flag(metal)
+        exposed-modules:            AI.LanguageModel.LLaMA.FFI.Metal
+
+    if flag(mpi)
+        exposed-modules:            AI.LanguageModel.LLaMA.FFI.MPI
+
+    if flag(opencl)
+        exposed-modules:            AI.LanguageModel.LLaMA.FFI.OpenCL
+
+    default-language:               GHC2021
+    other-extensions:               LambdaCase
+                                  , RecordWildCards
+                                  , TemplateHaskell
+
+    -- link to c++ std library, referred from bos/double-conversion
+    if impl(ghc >= 9.4)
+        build-depends:              system-cxx-std-lib == 1.0
+    elif os(darwin) || os(freebsd)
+        extra-libraries:            c++
+    elif os(windows)
+        if arch(x86_64) && impl(ghc < 8.6.5)
+            extra-libraries:        stdc++-6 gcc_s_seh-1
+        elif arch(x86_64)
+            extra-libraries:        stdc++ gcc_s_seh-1
+        elif impl(ghc >= 8.6.5)
+            extra-libraries:        stdc++ gcc_s_dw2-1
+        else 
+            extra-libraries:        stdc++-6 gcc_s_dw2-1
+    else
+        extra-libraries:            stdc++
+
+executable llama-haskell
+    import:                         warnings
+    main-is:                        Main.hs
+    -- other-modules:
+    -- other-extensions:
+    build-depends:                  base
+                                  , llama-haskell
+                                  , microlens-mtl
+                                  , mtl
+                                  , optparse-applicative
+                                  , random
+    hs-source-dirs:   app
+    default-language: GHC2021
+
+test-suite llama-haskell-test
+    import:                         warnings
+    default-language:               GHC2021
+    -- other-modules:
+    -- other-extensions:
+    type:                           exitcode-stdio-1.0
+    hs-source-dirs:                 test
+    main-is:                        Main.hs
+    build-depends:                  base
+                                  , llama-haskell

@@ -1,0 +1,11 @@
+CompileFlags:
+    Add:
+        - -I./cbits
+        - -I./llama.cpp
+        - -I./llama.cpp/common
+        - -I../cbits
+        - -I../llama.cpp
+        - -I../llama.cpp/common
+        - -I../../cbits
+        - -I../../llama.cpp
+        - -I../../llama.cpp/common
